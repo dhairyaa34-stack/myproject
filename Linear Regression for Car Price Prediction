@@ -1,0 +1,186 @@
+# Lab 2: Linear Regression for Car Price Prediction
+# Aim: To develop a Linear Regression model for predicting car prices
+# using suitable data preprocessing and machine learning techniques.
+
+import pandas as pd
+import numpy as np
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+from sklearn.feature_selection import SelectKBest, f_regression
+from sklearn.model_selection import GridSearchCV
+
+# Load dataset
+df = pd.read_csv("car prices.csv")  # Replace with your dataset path
+df.head()
+
+df.shape
+df.columns
+df.info()
+df.describe()
+
+df.isnull().sum()
+df.duplicated().sum()
+df.dtypes
+
+# ---------------- EDA / Visualization ----------------
+
+# Distribution of Selling Price
+plt.figure(figsize=(8, 5))
+sns.histplot(df['Selling_Price'], kde=True)
+plt.title("Distribution of Car Prices")
+plt.show()
+
+# Brand-wise Selling Price
+plt.figure(figsize=(12, 5))
+sns.boxplot(x="Brand", y="Selling_Price", data=df)
+plt.xticks(rotation=90)
+plt.show()
+
+# Fuel Type Count
+sns.countplot(x="Fuel", data=df)
+plt.show()
+
+# Transmission Count
+sns.countplot(x="Transmission", data=df)
+plt.show()
+
+# Scatter Plot
+sns.scatterplot(x="KM_Driven", y="Selling_Price", data=df)
+plt.show()
+
+# ---------------- Correlation Matrix ----------------
+from sklearn.preprocessing import LabelEncoder
+
+temp = df.copy()
+le = LabelEncoder()
+
+for col in temp.select_dtypes(include="object"):
+    temp[col] = le.fit_transform(temp[col])
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(temp.corr(), annot=True, cmap="coolwarm")
+plt.show()
+
+# ---------------- Data Preprocessing ----------------
+df = pd.get_dummies(df, drop_first=True)
+
+# Features and Target
+X = df.drop("Selling_Price", axis=1)
+y = df["Selling_Price"]
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+# ---------------- Simple Linear Regression ----------------
+X_simple = df[["Year"]]
+y = df["Selling_Price"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_simple,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+# Train
+slr = LinearRegression()
+slr.fit(X_train, y_train)
+
+# Prediction
+y_pred = slr.predict(X_test)
+
+# Evaluation
+print("MAE :", mean_absolute_error(y_test, y_pred))
+print("MSE :", mean_squared_error(y_test, y_pred))
+print("RMSE :", np.sqrt(mean_squared_error(y_test, y_pred)))
+print("R2 Score :", r2_score(y_test, y_pred))
+
+# Regression Line
+plt.scatter(X_test, y_test)
+plt.plot(X_test, y_pred, color="red")
+plt.xlabel("Year")
+plt.ylabel("Selling Price")
+plt.show()
+
+# ---------------- Multiple Linear Regression ----------------
+X = df.drop("Selling_Price", axis=1)
+y = df["Selling_Price"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+
+print("MAE :", mean_absolute_error(y_test, y_pred))
+print("MSE :", mean_squared_error(y_test, y_pred))
+print("RMSE :", np.sqrt(mean_squared_error(y_test, y_pred)))
+print("R2 Score :", r2_score(y_test, y_pred))
+
+# ---------------- Feature Selection ----------------
+selector = SelectKBest(score_func=f_regression, k=5)
+X_new = selector.fit_transform(X, y)
+
+selected_features = X.columns[selector.get_support()]
+print(selected_features)
+
+X = df[selected_features]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X,
+    y,
+    test_size=0.2,
+    random_state=42
+)
+
+feature_model = LinearRegression()
+feature_model.fit(X_train, y_train)
+
+y_pred = feature_model.predict(X_test)
+
+print("MAE :", mean_absolute_error(y_test, y_pred))
+print("MSE :", mean_squared_error(y_test, y_pred))
+print("RMSE :", np.sqrt(mean_squared_error(y_test, y_pred)))
+print("R2 Score :", r2_score(y_test, y_pred))
+
+# ---------------- Hyperparameter Tuning ----------------
+parameters = {
+    "fit_intercept": [True, False],
+    "positive": [True, False]
+}
+
+grid = GridSearchCV(
+    LinearRegression(),
+    parameters,
+    cv=5,
+    scoring="r2"
+)
+
+grid.fit(X_train, y_train)
+
+print(grid.best_params_)
+
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+
+print("MAE :", mean_absolute_error(y_test, y_pred))
+print("MSE :", mean_squared_error(y_test, y_pred))
+print("RMSE :", np.sqrt(mean_squared_error(y_test, y_pred)))
+print("R2 Score :", r2_score(y_test, y_pred))
