@@ -1,0 +1,121 @@
+"""
+Lab 3: Find-S and Candidate Elimination Algorithms
+Dataset: Car Evaluation Dataset (Car Evaluation.csv)
+
+Attributes used as instance features (X):
+    buying price, maintenance cost, number of doors,
+    number of persons, luggage boot, safety
+
+Target concept (y): decision -> {unacceptable, acceptable, good, vgood}
+
+Both algorithms below treat "acceptable" as the positive class and every
+other label as negative, consistent with the classic single-target-concept
+formulation of Find-S / Candidate Elimination.
+"""
+
+import pandas as pd
+import numpy as np
+
+# ---------------------------------------------------------------------
+# 1. Load and inspect the dataset
+# ---------------------------------------------------------------------
+df = pd.read_csv("Car Evaluation.csv")
+
+print(df.head(10))
+print(df.tail(10))
+print(df.info)
+print(df.shape)
+print(df.describe())
+
+X = df.iloc[:, :-1].values   # feature columns
+y = df.iloc[:, -1].values    # target column (decision)
+
+
+# ---------------------------------------------------------------------
+# 2. Find-S Algorithm
+# ---------------------------------------------------------------------
+def find_s(X, y):
+    """
+    Finds the most specific hypothesis that is consistent with all the
+    positive ('acceptable') training examples.
+    """
+    hypo = None
+    print("Initial Hypothesis:", hypo)
+
+    for i in range(len(X)):
+        if y[i] == "acceptable":
+            if hypo is None:
+                hypo = X[i].copy()
+            else:
+                for j in range(len(hypo)):
+                    if hypo[j] != X[i][j]:
+                        hypo[j] = "?"
+
+            print(f"\nAfter Training Example {i + 1}")
+            print(hypo)
+
+    return hypo
+
+
+final_hypo = find_s(X, y)
+print("\nFinal Hypothesis (Find-S)")
+print(final_hypo)
+
+
+# ---------------------------------------------------------------------
+# 3. Candidate Elimination Algorithm
+# ---------------------------------------------------------------------
+def candidate_elimination(concepts, target):
+    """
+    Maintains the Version Space using a Specific boundary (S) and a
+    General boundary (G) that are updated for every training example.
+    """
+    specific = concepts[0].copy()
+    general = [["?" for _ in range(len(specific))]]
+
+    print("Initial S:", specific)
+    print("Initial G:", general)
+
+    for i, h in enumerate(concepts):
+
+        if target[i] == "acceptable":
+            # Generalize S so that it also covers this positive example
+            for x in range(len(specific)):
+                if h[x] != specific[x]:
+                    specific[x] = "?"
+
+        else:
+            # Specialize G so that it excludes this negative example
+            new_general = []
+            for g in general:
+                for x in range(len(specific)):
+                    if g[x] == "?" and specific[x] != h[x]:
+                        new_g = g.copy()
+                        new_g[x] = specific[x]
+                        new_general.append(new_g)
+            general = new_general
+
+        print("\nExample", i + 1)
+        print("S =", specific)
+        print("Number of G hypotheses =", len(general))
+
+    return specific, general
+
+
+S, G = candidate_elimination(X, y)
+
+print("\nFinal Specific Boundary (S)")
+print(S)
+
+print("\nFinal General Boundary (G)")
+for g in G:
+    print(g)
+
+
+# ---------------------------------------------------------------------
+# 4. Compare the two hypotheses
+# ---------------------------------------------------------------------
+print("\n--- Comparison ---")
+print("Find-S final hypothesis           :", final_hypo)
+print("Candidate Elimination final S     :", S)
+print("Candidate Elimination final G     :", G)
